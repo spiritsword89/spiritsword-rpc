@@ -1,0 +1,15 @@
+package com.spiritsword.model;
+
+import com.alibaba.fastjson.parser.DefaultJSONParser;
+import com.alibaba.fastjson.parser.ObjectDeserializer;
+
+import java.lang.reflect.Type;
+
+public class RequestTypeDeserializer implements ObjectDeserializer {
+
+    @Override
+    public <T> T deserialze(DefaultJSONParser defaultJSONParser, Type type, Object o) {
+        String name = defaultJSONParser.parseObject(String.class);
+        return (T) RequestType.valueOf(name);
+    }
+}

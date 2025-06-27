@@ -1,0 +1,12 @@
+server:
+  port: 22288
+
+spring:
+  application:
+    name: spiritsword-rpc-server
+
+spiritsword:
+  rpc:
+    boss: 1
+    worker: 3
+    backlog: 128
