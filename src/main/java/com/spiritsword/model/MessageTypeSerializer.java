@@ -6,7 +6,7 @@ import com.alibaba.fastjson.serializer.ObjectSerializer;
 import java.io.IOException;
 import java.lang.reflect.Type;
 
-public class RequestTypeSerializer implements ObjectSerializer {
+public class MessageTypeSerializer implements ObjectSerializer {
     @Override
     public void write(JSONSerializer jsonSerializer, Object o, Object o1, Type type, int i) throws IOException {
         if(o == null) {
@@ -14,8 +14,8 @@ public class RequestTypeSerializer implements ObjectSerializer {
             return;
         }
 
-        if(o instanceof RequestType) {
-            RequestType requestType = (RequestType)o;
+        if(o instanceof MessageType) {
+            MessageType requestType = (MessageType)o;
             jsonSerializer.write(requestType.name());
         }
     }

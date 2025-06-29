@@ -6,4 +6,6 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface EnableSpiritswordRpcClient {
+    String clientId() default "";
+    String[] packages() default {};
 }

@@ -1,7 +1,7 @@
 package com.spiritsword.server;
 
-import com.spiritsword.handler.JsonDecodeHandler;
-import com.spiritsword.handler.JsonEncodeHandler;
+import com.spiritsword.handler.JsonMessageDecodeHandler;
+import com.spiritsword.handler.jsonRequestForwardEncoder;
 import com.spiritsword.handler.RpcRequestHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -38,8 +38,8 @@ public class RpcServer {
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel socketChannel) throws Exception {
-                        socketChannel.pipeline().addLast(new JsonDecodeHandler());
-                        socketChannel.pipeline().addLast(new JsonEncodeHandler());
+                        socketChannel.pipeline().addLast(new JsonMessageDecodeHandler());
+                        socketChannel.pipeline().addLast(new jsonRequestForwardEncoder());
                         socketChannel.pipeline().addLast(new RpcRequestHandler());
                     }
                 });

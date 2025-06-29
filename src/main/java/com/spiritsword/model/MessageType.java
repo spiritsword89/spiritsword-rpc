@@ -1,6 +1,6 @@
 package com.spiritsword.model;
 
-public enum RequestType {
+public enum MessageType {
     REGISTER,
     CALL,
     RESPONSE
