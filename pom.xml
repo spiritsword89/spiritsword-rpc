@@ -44,5 +44,10 @@
             <artifactId>jackson-databind</artifactId>
             <version>2.17.0</version> <!-- 或其他兼容版本 -->
         </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+        </dependency>
     </dependencies>
 </project>

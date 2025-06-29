@@ -2,7 +2,7 @@ package com.spiritsword.server;
 
 import com.spiritsword.handler.JsonMessageDecodeHandler;
 import com.spiritsword.handler.jsonRequestForwardEncoder;
-import com.spiritsword.handler.RpcRequestHandler;
+import com.spiritsword.handler.RpcServerMessageHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -17,34 +17,41 @@ public class RpcServer {
     @Value("${server.port}")
     private int port;
 
-    @Value("${spiritsword.rpc.boss}")
+    @Value("${spiritsword.rpc.server.boss}")
     private int bossGroupSize;
 
-    @Value("${spiritsword.rpc.worker}")
+    @Value("${spiritsword.rpc.server.worker}")
     private int workerGroupSize;
 
-    @Value("${spiritsword.rpc.backlog}")
+    @Value("${spiritsword.rpc.server.backlog}")
     private int backLogSize;
 
-    public void start() throws Exception{
+    public void start(){
         NioEventLoopGroup boss = new NioEventLoopGroup(bossGroupSize);
         NioEventLoopGroup worker = new NioEventLoopGroup(workerGroupSize);
-        ServerBootstrap serverBootstrap = new ServerBootstrap();
-        serverBootstrap
-                .group(boss, worker)
-                .channel(NioServerSocketChannel.class)
-                .option(ChannelOption.SO_BACKLOG, backLogSize)
-                .childOption(ChannelOption.SO_KEEPALIVE, true)
-                .childHandler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    protected void initChannel(SocketChannel socketChannel) throws Exception {
-                        socketChannel.pipeline().addLast(new JsonMessageDecodeHandler());
-                        socketChannel.pipeline().addLast(new jsonRequestForwardEncoder());
-                        socketChannel.pipeline().addLast(new RpcRequestHandler());
-                    }
-                });
+        try {
+            ServerBootstrap serverBootstrap = new ServerBootstrap();
+            serverBootstrap
+                    .group(boss, worker)
+                    .channel(NioServerSocketChannel.class)
+                    .option(ChannelOption.SO_BACKLOG, backLogSize)
+                    .childOption(ChannelOption.SO_KEEPALIVE, true)
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        protected void initChannel(SocketChannel socketChannel) throws Exception {
+                            socketChannel.pipeline().addLast(new JsonMessageDecodeHandler());
+                            socketChannel.pipeline().addLast(new jsonRequestForwardEncoder());
+                            socketChannel.pipeline().addLast(new RpcServerMessageHandler());
+                        }
+                    });
 
-        ChannelFuture future = serverBootstrap.bind(port).sync();
-        future.channel().close().sync();
+            ChannelFuture future = serverBootstrap.bind(port).sync();
+            future.channel().close().sync();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }finally {
+            boss.shutdownGracefully();
+            worker.shutdownGracefully();
+        }
     }
 }

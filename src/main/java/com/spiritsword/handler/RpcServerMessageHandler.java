@@ -11,7 +11,7 @@ import io.netty.util.AttributeKey;
 
 import java.util.UUID;
 
-public class RpcRequestHandler extends SimpleChannelInboundHandler<MessagePayload> {
+public class RpcServerMessageHandler extends SimpleChannelInboundHandler<MessagePayload> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, MessagePayload message) throws Exception {
         MessageType requestType = message.getMessageType();

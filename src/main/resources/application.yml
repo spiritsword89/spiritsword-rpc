@@ -7,6 +7,12 @@ spring:
 
 spiritsword:
   rpc:
-    boss: 1
-    worker: 3
-    backlog: 128
+    server:
+      boss: 1
+      worker: 3
+      backlog: 128
+    client:
+      id: default-client-id
+      worker: 3
+      host: 127.0.0.1
+      port: 6666
