@@ -53,6 +53,7 @@ public class MessagePayload implements Serializable {
         private MessageType messageType;
         private String[] paramTypes;
         private Object[] params;
+        private String returnValueType;
         private Object returnValue;
 
         public RequestMessageBuilder setClientId(String clientId) {
@@ -62,6 +63,11 @@ public class MessagePayload implements Serializable {
 
         public RequestMessageBuilder setRequestClientId(String requestClientId) {
             this.requestClientId = requestClientId;
+            return this;
+        }
+
+        public RequestMessageBuilder setReturnValueType(String returnValueType) {
+            this.returnValueType = returnValueType;
             return this;
         }
 
@@ -108,18 +114,24 @@ public class MessagePayload implements Serializable {
     public static class RpcRequest implements Serializable {
         private String requestClientId;
         private String requestId;
-        private String requestMethodName;
+        private String requestMethodSimpleName;
         private String requestedClassName;
+        private String returnValueType;
         private String[] paramTypes;
         private Object[] params;
 
         public RpcRequest(MessagePayload.RequestMessageBuilder builder) {
             this.requestClientId = builder.requestClientId;
             this.requestId = builder.requestId;
-            this.requestMethodName = builder.requestMethodName;
+            this.requestMethodSimpleName = builder.requestMethodName;
             this.requestedClassName = builder.requestedClassName;
             this.paramTypes = builder.paramTypes;
             this.params = builder.params;
+            this.returnValueType = builder.returnValueType;
+        }
+
+        public String getReturnValueSimpleName() {
+            return this.returnValueType != null ? this.returnValueType.substring(this.returnValueType.lastIndexOf(".") + 1) : null;
         }
 
         public String getRequestClientId() {
@@ -138,12 +150,12 @@ public class MessagePayload implements Serializable {
             this.requestId = requestId;
         }
 
-        public String getRequestMethodName() {
-            return requestMethodName;
+        public String getRequestMethodSimpleName() {
+            return requestMethodSimpleName;
         }
 
-        public void setRequestMethodName(String requestMethodName) {
-            this.requestMethodName = requestMethodName;
+        public void setRequestMethodSimpleName(String requestMethodSimpleName) {
+            this.requestMethodSimpleName = requestMethodSimpleName;
         }
 
         public String getRequestedClassName() {
@@ -168,6 +180,14 @@ public class MessagePayload implements Serializable {
 
         public void setParams(Object[] params) {
             this.params = params;
+        }
+
+        public String getReturnValueType() {
+            return returnValueType;
+        }
+
+        public void setReturnValueType(String returnValueType) {
+            this.returnValueType = returnValueType;
         }
     }
 

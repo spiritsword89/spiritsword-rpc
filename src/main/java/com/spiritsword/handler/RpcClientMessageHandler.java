@@ -8,14 +8,14 @@ import io.netty.channel.SimpleChannelInboundHandler;
 
 public class RpcClientMessageHandler extends SimpleChannelInboundHandler<MessagePayload> {
 
-    private RpcClient rpcClient;
+    private final RpcClient rpcClient;
 
     public RpcClientMessageHandler(RpcClient rpcClient) {
         this.rpcClient = rpcClient;
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext, MessagePayload messagePayload) throws Exception {
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, MessagePayload messagePayload) {
         if(messagePayload.getMessageType().equals(MessageType.FORWARD)) {
             processRequestAndGenerateResponse(messagePayload);
         } else if (messagePayload.getMessageType().equals(MessageType.RESPONSE)) {
@@ -24,12 +24,12 @@ public class RpcClientMessageHandler extends SimpleChannelInboundHandler<Message
     }
 
     @Override
-    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+    public void channelRegistered(ChannelHandlerContext ctx) {
         rpcClient.registerChannel(ctx.channel());
     }
 
     private void processRequestAndGenerateResponse(MessagePayload messagePayload) {
-
+        rpcClient.processRequest(messagePayload);
     }
 
     private void completeRequest(MessagePayload messagePayload) {

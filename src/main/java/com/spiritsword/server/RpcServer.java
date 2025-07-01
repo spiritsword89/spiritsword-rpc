@@ -10,21 +10,44 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import org.springframework.beans.factory.annotation.Value;
 
 public class RpcServer {
-
-    @Value("${server.port}")
     private int port;
-
-    @Value("${spiritsword.rpc.server.boss}")
     private int bossGroupSize;
-
-    @Value("${spiritsword.rpc.server.worker}")
     private int workerGroupSize;
-
-    @Value("${spiritsword.rpc.server.backlog}")
     private int backLogSize;
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public int getBossGroupSize() {
+        return bossGroupSize;
+    }
+
+    public void setBossGroupSize(int bossGroupSize) {
+        this.bossGroupSize = bossGroupSize;
+    }
+
+    public int getWorkerGroupSize() {
+        return workerGroupSize;
+    }
+
+    public void setWorkerGroupSize(int workerGroupSize) {
+        this.workerGroupSize = workerGroupSize;
+    }
+
+    public int getBackLogSize() {
+        return backLogSize;
+    }
+
+    public void setBackLogSize(int backLogSize) {
+        this.backLogSize = backLogSize;
+    }
 
     public void start(){
         NioEventLoopGroup boss = new NioEventLoopGroup(bossGroupSize);
