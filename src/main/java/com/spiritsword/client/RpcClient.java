@@ -2,6 +2,7 @@ package com.spiritsword.client;
 
 
 import com.spiritsword.exceptions.RequestedClassNotDeterminedException;
+import com.spiritsword.handler.ClientHeartbeatHandler;
 import com.spiritsword.handler.JsonCallMessageEncoder;
 import com.spiritsword.handler.JsonMessageDecodeHandler;
 import com.spiritsword.handler.RpcClientMessageHandler;
@@ -12,10 +13,12 @@ import com.spiritsword.model.MethodDescriptor;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +39,7 @@ import java.lang.reflect.Proxy;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 public class RpcClient implements SmartInitializingSingleton, ApplicationContextAware, NonLazyInitService {
 
@@ -49,12 +53,13 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
 
     private String clientId;
 
+    NioEventLoopGroup worker = new NioEventLoopGroup();
+
     @Value("${spiritsword.rpc.server.port}")
     private String port;
     @Value("${spiritsword.rpc.client.host}")
     private String host;
-    @Value("${spiritsword.rpc.client.worker}")
-    private int workerGroup;
+
 
     public String[] getScanPackages() {
         return scanPackages;
@@ -92,7 +97,6 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
 
     private void connect() {
         Bootstrap bootstrap = new Bootstrap();
-        NioEventLoopGroup worker = new NioEventLoopGroup(workerGroup);
 
         try {
             bootstrap
@@ -103,19 +107,32 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
                             socketChannel.pipeline().addLast(new JsonCallMessageEncoder());
                             socketChannel.pipeline().addLast(new JsonMessageDecodeHandler());
+                            socketChannel.pipeline().addLast(new IdleStateHandler(0, 5,0));
+                            socketChannel.pipeline().addLast(new ClientHeartbeatHandler());
                             socketChannel.pipeline().addLast(new RpcClientMessageHandler(RpcClient.this));
                         }
                     });
 
-            ChannelFuture future = bootstrap.connect(host, Integer.parseInt(port)).sync();
-            this.channel = future.channel();
-            this.sendRegistrationRequest();
-            future.channel().closeFuture().sync();
+            ChannelFuture channelFuture1 = bootstrap.connect(host, Integer.parseInt(port)).addListener(f -> {
+                if (f.isSuccess()) {
+                    ChannelFuture channelFuture = (ChannelFuture) f;
+                    this.channel = channelFuture.channel();
+                    this.sendRegistrationRequest();
+                } else {
+                    logger.warn("Failed to connect to server, trying to reconnect again");
+                    reconnect();
+                }
+            });
+            channelFuture1.channel().closeFuture().sync();
         }catch (Exception e){
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }finally {
             worker.shutdownGracefully();
         }
+    }
+
+    public void reconnect() {
+        worker.schedule(this::connect, 5, TimeUnit.SECONDS);
     }
 
     public void sendRegistrationRequest() {
@@ -160,14 +177,11 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
                 channel.writeAndFlush(payload);
 
                 try {
-                    System.out.println("before call get()");
                     MessagePayload.RpcResponse rpcResponse = future.get();
-
-                    System.out.println("after call get()");
                     requestMap.remove(requstId);
                     return rpcResponse.getResult();
                 }catch (Exception e){
-                    e.printStackTrace();
+                    logger.error(e.getMessage(), e);
                 }
 
                 return null;
@@ -193,6 +207,7 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
         }
 
         if(beansOfType.size() > 1) {
+            logger.info("More than one beans of type {} found", requestedClassName);
             throw new RequestedClassNotDeterminedException();
         }
 
@@ -203,6 +218,7 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
         MethodDescriptor methodDescriptor = methodHashMap.get(className).get(requestedMethodId);
 
         if(methodDescriptor == null) {
+            logger.info("Method Not Found");
             throw new NoSuchMethodException();
         }
 
@@ -219,10 +235,8 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
                         .setReturnValue(result).build();
 
                 channel.writeAndFlush(responseMessagePayload);
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            } catch (InvocationTargetException e) {
-                throw new RuntimeException(e);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                logger.error(e.getMessage(), e);
             }
         }
     }

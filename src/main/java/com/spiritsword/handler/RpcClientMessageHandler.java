@@ -31,6 +31,13 @@ public class RpcClientMessageHandler extends SimpleChannelInboundHandler<Message
         }
     }
 
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        if(!ctx.channel().isActive()){
+            rpcClient.reconnect();
+        }
+    }
+
     private void processRequestAndGenerateResponse(MessagePayload messagePayload) throws Exception {
         rpcClient.processRequest(messagePayload);
     }

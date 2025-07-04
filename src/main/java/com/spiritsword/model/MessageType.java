@@ -4,5 +4,6 @@ public enum MessageType {
     REGISTER,
     CALL,
     FORWARD,
-    RESPONSE
+    RESPONSE,
+    HEART_BEAT
 }

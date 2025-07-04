@@ -29,7 +29,7 @@ public class JsonMessageDecodeHandler extends ByteToMessageDecoder {
         MessagePayload messagePayload = JSON.parseObject(bytes, MessagePayload.class);
 
         switch(messageType) {
-            case 1:
+            case 1, 5:
                 messagePayload.setPayload(null);
                 break;
             case 2, 3:

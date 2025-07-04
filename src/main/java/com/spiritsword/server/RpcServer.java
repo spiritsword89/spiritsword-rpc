@@ -1,8 +1,6 @@
 package com.spiritsword.server;
 
-import com.spiritsword.handler.JsonCallMessageEncoder;
-import com.spiritsword.handler.JsonMessageDecodeHandler;
-import com.spiritsword.handler.RpcServerMessageHandler;
+import com.spiritsword.handler.*;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -10,8 +8,14 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RpcServer {
+
+    private static final Logger logger = LoggerFactory.getLogger(RpcServer.class);
+
     private int port;
     private int bossGroupSize;
     private int workerGroupSize;
@@ -73,6 +77,8 @@ public class RpcServer {
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
                             socketChannel.pipeline().addLast(new JsonMessageDecodeHandler());
                             socketChannel.pipeline().addLast(new JsonCallMessageEncoder());
+                            socketChannel.pipeline().addLast(new IdleStateHandler(10, 0, 0));
+                            socketChannel.pipeline().addLast(new ServerHeartbeatHandler(new DefaultChannelClosePostProcessor()));
                             socketChannel.pipeline().addLast(new RpcServerMessageHandler());
                         }
                     });
@@ -81,7 +87,7 @@ public class RpcServer {
             System.out.println("Server started on port 22188");
             future.channel().closeFuture().sync();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            logger.error("server start error", e);
         }finally {
             boss.shutdownGracefully();
             worker.shutdownGracefully();
