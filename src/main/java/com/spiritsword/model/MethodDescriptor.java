@@ -38,7 +38,7 @@ public class MethodDescriptor {
         String id = String.join(".", method.getName(), String.valueOf(method.getParameterCount()));
         List<String> parameterTypes = new ArrayList<>();
         for (Class<?> paramType : paramTypes) {
-            parameterTypes.add(paramType.getName());
+            parameterTypes.add(paramType.getSimpleName());
             id = String.join(".", id, paramType.getSimpleName());
         }
 

@@ -37,7 +37,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class RpcClient implements SmartInitializingSingleton, ApplicationContextAware {
+public class RpcClient implements SmartInitializingSingleton, ApplicationContextAware, NonLazyInitService {
 
     private static final Logger logger = LoggerFactory.getLogger(RpcClient.class);
 
@@ -49,7 +49,7 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
 
     private String clientId;
 
-    @Value("${spiritsword.rpc.client.port}")
+    @Value("${spiritsword.rpc.server.port}")
     private String port;
     @Value("${spiritsword.rpc.client.host}")
     private String host;
@@ -80,8 +80,14 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
 
     @PostConstruct
     public void initialize() {
-        connect();
-        sendRegistrationRequest();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                connect();
+            }
+        }).start();
+
+        System.out.println("Client finished initialization process");
     }
 
     private void connect() {
@@ -102,6 +108,8 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
                     });
 
             ChannelFuture future = bootstrap.connect(host, Integer.parseInt(port)).sync();
+            this.channel = future.channel();
+            this.sendRegistrationRequest();
             future.channel().closeFuture().sync();
         }catch (Exception e){
             e.printStackTrace();
@@ -115,20 +123,22 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
         this.channel.writeAndFlush(msg);
     }
 
-    public void registerChannel(Channel channel) {
-        this.channel = channel;
-    }
-
     @SuppressWarnings("all")
     public <T> T generate(Class<T> clazz, String requestedServiceClientId) {
         return (T) Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(), new Class[]{clazz}, new InvocationHandler() {
             @Override
             public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                int totalParams = args.length;
-                String[] paramTypes = new String[totalParams];
+                String name = method.getName();
+                if (name.equals("toString")) return "Proxy[" + this.getClass().getSimpleName() + "]";
+                if (name.equals("hashCode")) return System.identityHashCode(proxy);
+                if (name.equals("equals")) return proxy == args[0];
 
-                for(int i = 0; i < totalParams; i++) {
-                    paramTypes[i] = args[i].getClass().getSimpleName();
+                Class<?>[] parameterTypes = method.getParameterTypes();
+
+                String[] allTypes = new String[parameterTypes.length];
+
+                for(int i = 0; i < parameterTypes.length; i++){
+                    allTypes[i] = (parameterTypes[i].getSimpleName());
                 }
 
                 String requstId = UUID.randomUUID().toString();
@@ -137,9 +147,10 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
                         .setMessageType(MessageType.CALL)
                         .setRequestId(requstId)
                         .setRequestClientId(requestedServiceClientId)
-                        .setParamTypes(paramTypes)
+                        .setParamTypes(allTypes)
                         .setParams(args)
                         .setRequestMethodName(method.getName())
+                        .setReturnValueType(method.getReturnType().getName())
                         .setRequestedClassName(clazz.getName()).build();
 
                 CompletableFuture<MessagePayload.RpcResponse> future = new CompletableFuture<>();
@@ -148,16 +159,23 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
 
                 channel.writeAndFlush(payload);
 
-                MessagePayload.RpcResponse rpcResponse = future.get();
+                try {
+                    System.out.println("before call get()");
+                    MessagePayload.RpcResponse rpcResponse = future.get();
 
-                requestMap.remove(requstId);
+                    System.out.println("after call get()");
+                    requestMap.remove(requstId);
+                    return rpcResponse.getResult();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
 
-                return rpcResponse.getResult();
+                return null;
             }
         });
     }
 
-    public void processRequest(MessagePayload message) {
+    public void processRequest(MessagePayload message) throws Exception {
         MessagePayload.RpcRequest request = (MessagePayload.RpcRequest)message.getPayload();
         String requestedClassName = request.getRequestedClassName();
         String requestMethodSimpleName = request.getRequestMethodSimpleName();
@@ -171,7 +189,7 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
             beansOfType = context.getBeansOfType(Class.forName(requestedClassName));
         } catch (ClassNotFoundException e) {
             logger.error("Class Not Found");
-            throw new RuntimeException(e);
+            throw new ClassNotFoundException();
         }
 
         if(beansOfType.size() > 1) {
@@ -183,6 +201,10 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
         String className = requestedClassBean.getClass().getName();
 
         MethodDescriptor methodDescriptor = methodHashMap.get(className).get(requestedMethodId);
+
+        if(methodDescriptor == null) {
+            throw new NoSuchMethodException();
+        }
 
         if(methodDescriptor.getMethodName().equals(requestMethodSimpleName) && methodDescriptor.getNumOfParams() == paramTypes.length) {
             // more check shall be added
@@ -219,6 +241,7 @@ public class RpcClient implements SmartInitializingSingleton, ApplicationContext
 
     @Override
     public void afterSingletonsInstantiated() {
+        System.out.println("afterSingletonsInstantiated started");
         List<Class<?>> classList = new ArrayList<>();
         for(String scanPackage: this.scanPackages) {
             scanPackage = scanPackage.replaceAll("\\.", "/");

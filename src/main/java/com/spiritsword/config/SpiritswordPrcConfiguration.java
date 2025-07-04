@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SpiritswordPrcConfiguration {
 
-    @Value("${server.port}")
+    @Value("${spiritsword.rpc.server.port}")
     private int port;
 
     @Value("${spiritsword.rpc.server.boss}")
@@ -27,7 +27,7 @@ public class SpiritswordPrcConfiguration {
         rpcServer.setBossGroupSize(bossGroupSize);
         rpcServer.setWorkerGroupSize(workerGroupSize);
         rpcServer.setBackLogSize(backLogSize);
-        rpcServer.start();
+        rpcServer.startServer();
         return rpcServer;
     };
 }

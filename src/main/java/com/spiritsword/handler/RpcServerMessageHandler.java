@@ -1,6 +1,7 @@
 package com.spiritsword.handler;
 
 import com.spiritsword.exceptions.ChannelNotRegisterException;
+import com.spiritsword.exceptions.RemoteCallException;
 import com.spiritsword.model.MessagePayload;
 import com.spiritsword.model.MessageType;
 import com.spiritsword.server.ClientSessionManager;
@@ -8,33 +9,44 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.AttributeKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.UUID;
 
 public class RpcServerMessageHandler extends SimpleChannelInboundHandler<MessagePayload> {
+
+    private static final Logger logger = LoggerFactory.getLogger(RpcServerMessageHandler.class);
+
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, MessagePayload message) throws Exception {
-        MessageType requestType = message.getMessageType();
+    protected void channelRead0(ChannelHandlerContext ctx, MessagePayload message) {
+        try {
+            MessageType requestType = message.getMessageType();
 
-        if(requestType.equals(MessageType.REGISTER)) {
-            registerClientIntoSession(message, ctx.channel());
-        }
-
-        if(requestType.equals(MessageType.CALL)) {
-
-            Channel channel = ClientSessionManager.getClientChannel(message.getClientId());
-
-            MessagePayload.RpcRequest request = (MessagePayload.RpcRequest) message.getPayload();
-
-            if(channel == null) {
-                throw new ChannelNotRegisterException(request.getRequestClientId());
+            if(requestType.equals(MessageType.REGISTER)) {
+                registerClientIntoSession(message, ctx.channel());
             }
 
-            forwardRequestToClient(message, channel);
-        }
+            if(requestType.equals(MessageType.CALL)) {
+                MessagePayload.RpcRequest request = (MessagePayload.RpcRequest) message.getPayload();
 
-        if(requestType.equals(MessageType.RESPONSE)) {
-            returnRequestToClient(message);
+                if(request.getRequestClientId().equals(message.getClientId())) {
+                    throw new RemoteCallException("Client Id and Request Client Id are the same.");
+                }
+
+                Channel channel = ClientSessionManager.getClientChannel(request.getRequestClientId());
+
+                if(channel == null) {
+                    throw new ChannelNotRegisterException(request.getRequestClientId());
+                }
+
+                forwardRequestToClient(message, channel);
+            }
+
+            if(requestType.equals(MessageType.RESPONSE)) {
+                returnRequestToClient(message);
+            }
+        } catch (Exception e) {
+            logger.error(e.getMessage(),e);
         }
     }
 
@@ -49,15 +61,13 @@ public class RpcServerMessageHandler extends SimpleChannelInboundHandler<Message
         String requestId = response.getRequestId();
         MessagePayload requestClient = ClientSessionManager.getRequestClient(requestId);
         Channel channel = ClientSessionManager.getClientChannel(requestClient.getClientId());
-
-        channel.writeAndFlush(response);
+        channel.writeAndFlush(message);
     }
 
     private void forwardRequestToClient(MessagePayload message, Channel channel) {
-        MessagePayload.RpcRequest request = (MessagePayload.RpcRequest) message.getPayload();
-        request.setRequestId(UUID.randomUUID().toString());
         ClientSessionManager.putRequest(message);
-        channel.writeAndFlush(request);
+        message.setMessageType(MessageType.FORWARD);
+        channel.writeAndFlush(message);
     }
 
     private void registerClientIntoSession(MessagePayload message, Channel channel) {

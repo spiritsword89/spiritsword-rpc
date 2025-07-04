@@ -12,7 +12,7 @@ import java.util.List;
 public class JsonMessageDecodeHandler extends ByteToMessageDecoder {
     @Override
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) throws Exception {
-        if(byteBuf.readableBytes() < 2) {
+        if(byteBuf.readableBytes() < 5) {
             return;
         }
         byteBuf.markReaderIndex();
@@ -32,12 +32,12 @@ public class JsonMessageDecodeHandler extends ByteToMessageDecoder {
             case 1:
                 messagePayload.setPayload(null);
                 break;
-            case 2:
+            case 2, 3:
                 JSONObject payload = (JSONObject) messagePayload.getPayload();
                 MessagePayload.RpcRequest rpcRequest = payload.toJavaObject(MessagePayload.RpcRequest.class);
                 messagePayload.setPayload(rpcRequest);
                 break;
-            case 3:
+            case 4:
                 JSONObject jsonPayload  = (JSONObject) messagePayload.getPayload();
                 MessagePayload.RpcResponse response = jsonPayload.toJavaObject(MessagePayload.RpcResponse.class);
                 messagePayload.setPayload(response);

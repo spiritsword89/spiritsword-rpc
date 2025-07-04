@@ -1,13 +1,11 @@
-server:
-  port: 22288
-
 spring:
   application:
-    name: spiritsword-rpc-server
+    name: spiritsword-rpc
 
 spiritsword:
   rpc:
     server:
+      port: 22188
       boss: 1
       worker: 3
       backlog: 128
@@ -15,4 +13,3 @@ spiritsword:
       id: default-client-id
       worker: 3
       host: 127.0.0.1
-      port: 6666

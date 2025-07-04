@@ -5,8 +5,12 @@ import com.spiritsword.model.MessagePayload;
 import com.spiritsword.model.MessageType;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class RpcClientMessageHandler extends SimpleChannelInboundHandler<MessagePayload> {
+    private static final Logger logger = LoggerFactory.getLogger(RpcClientMessageHandler.class);
 
     private final RpcClient rpcClient;
 
@@ -16,19 +20,18 @@ public class RpcClientMessageHandler extends SimpleChannelInboundHandler<Message
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, MessagePayload messagePayload) {
-        if(messagePayload.getMessageType().equals(MessageType.FORWARD)) {
-            processRequestAndGenerateResponse(messagePayload);
-        } else if (messagePayload.getMessageType().equals(MessageType.RESPONSE)) {
-            completeRequest(messagePayload);
+        try {
+            if(messagePayload.getMessageType().equals(MessageType.FORWARD)) {
+                processRequestAndGenerateResponse(messagePayload);
+            } else if (messagePayload.getMessageType().equals(MessageType.RESPONSE)) {
+                completeRequest(messagePayload);
+            }
+        }catch (Exception e){
+            logger.error(e.getMessage(),e);
         }
     }
 
-    @Override
-    public void channelRegistered(ChannelHandlerContext ctx) {
-        rpcClient.registerChannel(ctx.channel());
-    }
-
-    private void processRequestAndGenerateResponse(MessagePayload messagePayload) {
+    private void processRequestAndGenerateResponse(MessagePayload messagePayload) throws Exception {
         rpcClient.processRequest(messagePayload);
     }
 

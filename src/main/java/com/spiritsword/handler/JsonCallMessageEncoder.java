@@ -16,8 +16,10 @@ public class JsonCallMessageEncoder extends MessageToByteEncoder<MessagePayload>
             type = 1;
         } else if (messagePayload.getMessageType().equals(MessageType.CALL)) {
             type = 2;
-        } else {
+        } else if(messagePayload.getMessageType().equals(MessageType.FORWARD)){
             type = 3;
+        } else {
+            type = 4;
         }
 
         byteBuf.writeByte(type);

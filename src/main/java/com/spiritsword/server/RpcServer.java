@@ -1,7 +1,7 @@
 package com.spiritsword.server;
 
+import com.spiritsword.handler.JsonCallMessageEncoder;
 import com.spiritsword.handler.JsonMessageDecodeHandler;
-import com.spiritsword.handler.jsonRequestForwardEncoder;
 import com.spiritsword.handler.RpcServerMessageHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -49,7 +49,16 @@ public class RpcServer {
         this.backLogSize = backLogSize;
     }
 
-    public void start(){
+    public void startServer() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                start();
+            }
+        }).start();
+    }
+
+    private void start(){
         NioEventLoopGroup boss = new NioEventLoopGroup(bossGroupSize);
         NioEventLoopGroup worker = new NioEventLoopGroup(workerGroupSize);
         try {
@@ -63,13 +72,14 @@ public class RpcServer {
                         @Override
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
                             socketChannel.pipeline().addLast(new JsonMessageDecodeHandler());
-                            socketChannel.pipeline().addLast(new jsonRequestForwardEncoder());
+                            socketChannel.pipeline().addLast(new JsonCallMessageEncoder());
                             socketChannel.pipeline().addLast(new RpcServerMessageHandler());
                         }
                     });
 
             ChannelFuture future = serverBootstrap.bind(port).sync();
-            future.channel().close().sync();
+            System.out.println("Server started on port 22188");
+            future.channel().closeFuture().sync();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }finally {

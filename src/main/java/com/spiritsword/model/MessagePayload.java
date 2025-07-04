@@ -10,6 +10,10 @@ public class MessagePayload implements Serializable {
     private MessageType messageType;
     private Object payload;
 
+    public MessagePayload() {
+
+    }
+
     public MessagePayload(RequestMessageBuilder requestMessageBuilder) {
         this.clientId = requestMessageBuilder.clientId;
         this.messageType = requestMessageBuilder.messageType;
@@ -120,6 +124,10 @@ public class MessagePayload implements Serializable {
         private String[] paramTypes;
         private Object[] params;
 
+        public RpcRequest() {
+
+        }
+
         public RpcRequest(MessagePayload.RequestMessageBuilder builder) {
             this.requestClientId = builder.requestClientId;
             this.requestId = builder.requestId;
@@ -194,6 +202,10 @@ public class MessagePayload implements Serializable {
     public static class RpcResponse implements Serializable {
         private String requestId;
         private Object result;
+
+        public RpcResponse() {
+
+        }
 
         public RpcResponse(RequestMessageBuilder requestMessageBuilder) {
             this.requestId = requestMessageBuilder.requestId;

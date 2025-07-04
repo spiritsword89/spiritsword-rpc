@@ -7,7 +7,7 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@Import({RpcClientRegistrar.class})
+@Import({RpcClientRegistrar.class, PostStartupProcessor.class})
 public @interface EnableSpiritswordRpcClient {
     String clientId() default "";
     String[] packages() default {};
